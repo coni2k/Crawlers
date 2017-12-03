@@ -12,31 +12,6 @@ namespace Crawler.CrawlerConsoleApp
 {
     class Program
     {
-        private static int GetMonth(string monthText)
-        {
-            switch (monthText)
-            {
-                case "Ocak": return 1;
-                case "Şubat": return 2;
-                case "Mart": return 3;
-                case "Nisan": return 4;
-                case "Mayıs": return 5;
-                case "Haziran": return 6;
-                case "Temmuz": return 7;
-                case "Ağustos": return 8;
-                case "Eylül": return 9;
-                case "Ekim": return 10;
-                case "Kasım": return 11;
-                case "Aralık": return 12;
-                default:
-                    {
-                        Trace.WriteLine(monthText);
-                        return 1;
-                        //throw new ArgumentException("Invalid value: " + monthText, nameof(monthText));
-                    }
-            }
-        }
-
         static void Main(string[] args)
         {
             Trace.WriteLine($"Begin: {DateTime.Now}");
@@ -47,21 +22,29 @@ namespace Crawler.CrawlerConsoleApp
             Trace.WriteLine("");
             Trace.WriteLine($"End: {DateTime.Now}");
             Trace.WriteLine("--------------------------------------------------");
-
-            Console.ReadLine();
         }
 
         static async Task Execute()
         {
             using (var dbContext = new CrawlerContext())
             {
-                var list = Source.GetList().Take(1);
+                var list = Source.GetList();
+                var crawlFailedCount = 0;
 
                 foreach (var item in list)
                 {
                     try
                     {
-                        await ProcessAdvertisement(item, dbContext);
+                        var crawlFailed = await ProcessAdvertisement(item, dbContext);
+
+                        crawlFailedCount = crawlFailed ? crawlFailedCount + 1 : 0;
+
+                        if (crawlFailedCount == 5)
+                        {
+                            Trace.WriteLine("");
+                            Trace.WriteLine("Crawl failed 5 times in a row, aborting...");
+                            break;
+                        }
                     }
                     catch (WebException exception)
                     {
@@ -71,7 +54,7 @@ namespace Crawler.CrawlerConsoleApp
                         if (response.StatusCode == HttpStatusCode.Forbidden)
                         {
                             Trace.WriteLine("");
-                            Trace.WriteLine("Blocked, aborting...");
+                            Trace.WriteLine("Blocked by the host, aborting...");
                             break;
                         }
                     }
@@ -87,7 +70,8 @@ namespace Crawler.CrawlerConsoleApp
             }
         }
 
-        static async Task ProcessAdvertisement(string advertisementUrl, CrawlerContext dbContext)
+        /// <returns>Crawl failed?</returns>
+        static async Task<bool> ProcessAdvertisement(string advertisementUrl, CrawlerContext dbContext)
         {
             // Advertisement no
             var advertisementNoText = advertisementUrl.Substring(advertisementUrl.LastIndexOf("-", StringComparison.InvariantCulture) + 1,
@@ -115,7 +99,7 @@ namespace Crawler.CrawlerConsoleApp
             if (!newAdvertisement && advertisement.Deleted)
             {
                 Trace.WriteLine($"Already deleted: {advertisementNo}");
-                return;
+                return false;
             }
 
             // Already crawled?
@@ -123,19 +107,19 @@ namespace Crawler.CrawlerConsoleApp
             {
                 // Todo Recrawl
                 Trace.WriteLine($"Already crawled: {advertisementNo}");
-                return;
+                return false;
             }
 
             // Previous crawl failed, but not old enough?
-            if (!newAdvertisement && DateTime.UtcNow.Subtract(advertisement.ModifiedOn).Minutes < 60)
+            if (!newAdvertisement && DateTime.UtcNow.Subtract(advertisement.ModifiedOn).Days < 2)
             {
                 Trace.WriteLine($"Not crawled, but not old enough: {advertisementNo}");
-                return;
+                return false;
             }
 
             // Process html
-            //var html = await RequestHtml(advertisement);
-            var html = ReadHtmlFile(advertisement.AdvertisementNo);
+            var html = await RequestHtml(advertisement);
+            //var html = ReadHtmlFile(advertisement.AdvertisementNo);
 
             var doc = new HtmlDocument();
             doc.LoadHtml(html);
@@ -151,7 +135,7 @@ namespace Crawler.CrawlerConsoleApp
             if (infoNode == null)
             {
                 Trace.WriteLine($"Crawl failed: {advertisement.AdvertisementNo}");
-                return;
+                return true;
             }
 
             // Price
@@ -177,7 +161,7 @@ namespace Crawler.CrawlerConsoleApp
             var advertisementDateText = infoListValues[1].InnerText.TrimEtc();
             var advertisementDay = int.Parse(advertisementDateText.Substring(0,
                 advertisementDateText.IndexOf(" ", StringComparison.InvariantCulture)));
-            var advertisementMonth = GetMonth(advertisementDateText.Substring(
+            var advertisementMonth = Utils.GetMonth(advertisementDateText.Substring(
                 advertisementDateText.IndexOf(" ", StringComparison.InvariantCulture) + 1,
                 advertisementDateText.LastIndexOf(" ", StringComparison.InvariantCulture) -
                 (advertisementDateText.IndexOf(" ", StringComparison.InvariantCulture) + 1)));
@@ -256,6 +240,8 @@ namespace Crawler.CrawlerConsoleApp
             advertisement.AdvertisementOwner = advertisementOwner;
             advertisement.Swappable = swappable;
             advertisement.ModifiedOn = DateTime.UtcNow;
+
+            return false;
         }
 
         static async Task<string> RequestHtml(Advertisement advertisement)
@@ -269,12 +255,14 @@ namespace Crawler.CrawlerConsoleApp
             // Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8
             // Cache-Control: no-cache
             // Cookie: vid=251; cdid=z3ms7al5YWZFH1xk5a12af49; MS1=https://www.google.nl/; __gfp_64b=ymQlACAE5aclwIuPnfNlCBhFmeqgsm82HOkUR7grwdT.f7; showPremiumBanner=false; __gads=ID=f79eadd924f8acef:T=1511173963:S=ALNI_Mb9yqYqoBUsP3rpm0f34PG4Fw0QIA; userLastSearchSplashClosed=true; wm-ueug=%22fdb1fbeb-586b-3f87-61be-5515c85e3251%22; wm-fgug=1; wm-ASRep-213909=1; emlakt=yeni; _sm_au_c=iDV0jQMKLFkFskf70f; xsrf-token=9a380393e210652f9b7d1cfd6fd20a8552211238; language=tr; gcd=20171129211839; MDR=20171129; lastVisit=20171129; userType=yeni_bireysel; shuid=cPX4A1VsoSIEky3xvEoM45A; dopingPurchase=false; getPurchase=false; st=a2c9cc949113d430a9e794c7e1aecd9db6bcc337f208f93a6f61947a90e24a0d889516fc0611039bac76f1ac446688f2ccdc2788166542f12; dtLatC=5; rxVisitor=15118947149954AKF11TH45A7T4R0SNN0FTM6UNHQ3DGA; dtCookie=2$E4C5A9BE318043B3434969B7424CC9FA|RUM+Default+Application|1; dtSa=-; rxvt=1512160444472|1512155424841; dtPC=2$158603607_63h-vDRMGKAMNIJLFIBBCICBGALCBOHFHFJKMLN; bannerClosed=false; geoipCity=noord-holland; geoipIsp=tele2_nederland; SPSI=b3f06eddb056422b0dbc722292f21e6d; sbtsck=jav; nwsh=std; _dc_gtm_UA-235070-1=1; spcsrf=bb9304dbd61e0acd7dc4433abacfb217; PRLST=kQ; UTGv2=h4a07ed5196caa15b65919ce1cfe8c0eaf38; segIds=; _ga=GA1.2.386445408.1511173963; _gid=GA1.2.1165316201.1512155230
+            // Cookie: vid=251; cdid=z3ms7al5YWZFH1xk5a12af49; MS1=https://www.google.nl/; __gfp_64b=ymQlACAE5aclwIuPnfNlCBhFmeqgsm82HOkUR7grwdT.f7; showPremiumBanner=false; __gads=ID=f79eadd924f8acef:T=1511173963:S=ALNI_Mb9yqYqoBUsP3rpm0f34PG4Fw0QIA; userLastSearchSplashClosed=true; wm-ueug=%22fdb1fbeb-586b-3f87-61be-5515c85e3251%22; wm-fgug=1; wm-ASRep-213909=1; emlakt=yeni; _sm_au_c=iDV0jQMKLFkFskf70f; xsrf-token=9a380393e210652f9b7d1cfd6fd20a8552211238; language=tr; gcd=20171129211839; MDR=20171129; lastVisit=20171129; userType=yeni_bireysel; shuid=cPX4A1VsoSIEky3xvEoM45A; dopingPurchase=false; getPurchase=false; st=a2c9cc949113d430a9e794c7e1aecd9db6bcc337f208f93a6f61947a90e24a0d889516fc0611039bac76f1ac446688f2ccdc2788166542f12; dtLatC=5; rxVisitor=15118947149954AKF11TH45A7T4R0SNN0FTM6UNHQ3DGA; dtCookie=2$E4C5A9BE318043B3434969B7424CC9FA|RUM+Default+Application|1; dtSa=-; rxvt=1512160444472|1512155424841; dtPC=2$158603607_63h-vDRMGKAMNIJLFIBBCICBGALCBOHFHFJKMLN; SPSI=b3f06eddb056422b0dbc722292f21e6d; sbtsck=jav; nwsh=std; PRLST=rw; UTGv2=h4a07ed5196caa15b65919ce1cfe8c0eaf38; bannerClosed=false; segIds=; geoipCity=noord-holland; geoipIsp=tele2_nederland; _ga=GA1.2.386445408.1511173963; _gid=GA1.2.1165316201.1512155230; _dc_gtm_UA-235070-1=1
+            // Cookie: vid=251; cdid=z3ms7al5YWZFH1xk5a12af49; MS1=https://www.google.nl/; __gfp_64b=ymQlACAE5aclwIuPnfNlCBhFmeqgsm82HOkUR7grwdT.f7; showPremiumBanner=false; __gads=ID=f79eadd924f8acef:T=1511173963:S=ALNI_Mb9yqYqoBUsP3rpm0f34PG4Fw0QIA; userLastSearchSplashClosed=true; wm-ueug=%22fdb1fbeb-586b-3f87-61be-5515c85e3251%22; wm-fgug=1; wm-ASRep-213909=1; emlakt=yeni; _sm_au_c=iDV0jQMKLFkFskf70f; xsrf-token=9a380393e210652f9b7d1cfd6fd20a8552211238; language=tr; gcd=20171129211839; MDR=20171129; lastVisit=20171129; userType=yeni_bireysel; shuid=cPX4A1VsoSIEky3xvEoM45A; dopingPurchase=false; getPurchase=false; st=a2c9cc949113d430a9e794c7e1aecd9db6bcc337f208f93a6f61947a90e24a0d889516fc0611039bac76f1ac446688f2ccdc2788166542f12; geoipCity=noord-holland; geoipIsp=tele2_nederland; bannerClosed=false; _dc_gtm_UA-235070-1=1; SPSI=9eb5643d884da35a0aa49e55f30404ce; sbtsck=jav; nwsh=std; spcsrf=7c8fa5dc89c3d5cffd5582e2d3fe09e9; dtLatC=5; PRLST=IX; UTGv2=h4a07ed5196caa15b65919ce1cfe8c0eaf38; segIds=; _ga=GA1.2.386445408.1511173963; _gid=GA1.2.1165316201.1512155230; dtPC=2$312693930_8h-vDRMGIELPTOKCOBBCIAFBCAFAJBFHFJIIMP; rxVisitor=15118947149954AKF11TH45A7T4R0SNN0FTM6UNHQ3DGA; rxvt=1512314499165|1512312693938; dtCookie=2$E4C5A9BE318043B3434969B7424CC9FA|RUM+Default+Application|1; dtSa=-
             // Host: www.sahibinden.com
             // Pragma: no-cache
             // User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/62.0.3202.94 Safari/537.36
             request.Accept = "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8";
             request.Headers["Cache-Control"] = "no-cache";
-            request.Headers["Cookie"] = "vid=251; cdid=z3ms7al5YWZFH1xk5a12af49; MS1=https://www.google.nl/; __gfp_64b=ymQlACAE5aclwIuPnfNlCBhFmeqgsm82HOkUR7grwdT.f7; showPremiumBanner=false; __gads=ID=f79eadd924f8acef:T=1511173963:S=ALNI_Mb9yqYqoBUsP3rpm0f34PG4Fw0QIA; userLastSearchSplashClosed=true; wm-ueug=%22fdb1fbeb-586b-3f87-61be-5515c85e3251%22; wm-fgug=1; wm-ASRep-213909=1; emlakt=yeni; _sm_au_c=iDV0jQMKLFkFskf70f; xsrf-token=9a380393e210652f9b7d1cfd6fd20a8552211238; language=tr; gcd=20171129211839; MDR=20171129; lastVisit=20171129; userType=yeni_bireysel; shuid=cPX4A1VsoSIEky3xvEoM45A; dopingPurchase=false; getPurchase=false; st=a2c9cc949113d430a9e794c7e1aecd9db6bcc337f208f93a6f61947a90e24a0d889516fc0611039bac76f1ac446688f2ccdc2788166542f12; dtLatC=5; rxVisitor=15118947149954AKF11TH45A7T4R0SNN0FTM6UNHQ3DGA; dtCookie=2$E4C5A9BE318043B3434969B7424CC9FA|RUM+Default+Application|1; dtSa=-; rxvt=1512160444472|1512155424841; dtPC=2$158603607_63h-vDRMGKAMNIJLFIBBCICBGALCBOHFHFJKMLN; bannerClosed=false; geoipCity=noord-holland; geoipIsp=tele2_nederland; SPSI=b3f06eddb056422b0dbc722292f21e6d; sbtsck=jav; nwsh=std; _dc_gtm_UA-235070-1=1; spcsrf=bb9304dbd61e0acd7dc4433abacfb217; PRLST=kQ; UTGv2=h4a07ed5196caa15b65919ce1cfe8c0eaf38; segIds=; _ga=GA1.2.386445408.1511173963; _gid=GA1.2.1165316201.1512155230";
+            request.Headers["Cookie"] = "vid=251; cdid=z3ms7al5YWZFH1xk5a12af49; MS1=https://www.google.nl/; __gfp_64b=ymQlACAE5aclwIuPnfNlCBhFmeqgsm82HOkUR7grwdT.f7; showPremiumBanner=false; __gads=ID=f79eadd924f8acef:T=1511173963:S=ALNI_Mb9yqYqoBUsP3rpm0f34PG4Fw0QIA; userLastSearchSplashClosed=true; wm-ueug=%22fdb1fbeb-586b-3f87-61be-5515c85e3251%22; wm-fgug=1; wm-ASRep-213909=1; emlakt=yeni; _sm_au_c=iDV0jQMKLFkFskf70f; xsrf-token=9a380393e210652f9b7d1cfd6fd20a8552211238; language=tr; gcd=20171129211839; MDR=20171129; lastVisit=20171129; userType=yeni_bireysel; shuid=cPX4A1VsoSIEky3xvEoM45A; dopingPurchase=false; getPurchase=false; st=a2c9cc949113d430a9e794c7e1aecd9db6bcc337f208f93a6f61947a90e24a0d889516fc0611039bac76f1ac446688f2ccdc2788166542f12; geoipCity=noord-holland; geoipIsp=tele2_nederland; bannerClosed=false; _dc_gtm_UA-235070-1=1; SPSI=9eb5643d884da35a0aa49e55f30404ce; sbtsck=jav; nwsh=std; spcsrf=7c8fa5dc89c3d5cffd5582e2d3fe09e9; dtLatC=5; PRLST=IX; UTGv2=h4a07ed5196caa15b65919ce1cfe8c0eaf38; segIds=; _ga=GA1.2.386445408.1511173963; _gid=GA1.2.1165316201.1512155230; dtPC=2$312693930_8h-vDRMGIELPTOKCOBBCIAFBCAFAJBFHFJIIMP; rxVisitor=15118947149954AKF11TH45A7T4R0SNN0FTM6UNHQ3DGA; rxvt=1512314499165|1512312693938; dtCookie=2$E4C5A9BE318043B3434969B7424CC9FA|RUM+Default+Application|1; dtSa=-";
             request.Host = "www.sahibinden.com";
             request.Headers["Pragma"] = "no-cache";
             request.UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/62.0.3202.94 Safari/537.36";

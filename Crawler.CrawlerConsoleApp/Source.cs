@@ -204,7 +204,6 @@ namespace Crawler.CrawlerConsoleApp
             list.Add("https://www.sahibinden.com/ilan/emlak-konut-satilik-esenyurt-merkezde-1-plus1-super-lux-bahce-kati-daire-493995148/detay");
             list.Add("https://www.sahibinden.com/ilan/emlak-konut-satilik-hafta-sonuna-ozel-2-plus1-90-m2-ultra-luks-daire-sadece-99.000-tl-498819518/detay");
             list.Add("https://www.sahibinden.com/ilan/emlak-konut-satilik-esenyurt-talatpasa-da-yatirimlik-ultra-luks-1-plus1-sifir-bahce-kati-505889610/detay");
-            list.Add("https://www.sahibinden.com/ilan/emlak-konut-satilik-battalgazi-mahallesinde-acil-satilik-siginak-ustu-b.kati-daire-503232149/detay");
 
             return list;
         }
