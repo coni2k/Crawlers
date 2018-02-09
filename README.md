@@ -1,3 +1,3 @@
 # Crawler
 
-A basic HTTP crawler
+Basic HTTP crawlers for various purposes

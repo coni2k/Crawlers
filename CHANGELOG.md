@@ -1,5 +1,9 @@
 ### Changelog
 
+**0.3.0**
+
+* BTCCrawler
+
 **0.2.0**
 
 * Failed crawl count

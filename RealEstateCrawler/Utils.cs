@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Crawler.CrawlerConsoleApp
+namespace Crawlers.RealEstateCrawler
 {
     public static class Utils
     {

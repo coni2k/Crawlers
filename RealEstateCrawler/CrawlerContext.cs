@@ -1,9 +1,8 @@
 ﻿using System.Data.Entity;
-using System.Data.Entity.ModelConfiguration.Conventions;
 
-namespace Crawler.CrawlerConsoleApp
+namespace Crawlers.RealEstateCrawler
 {
-    public class CrawlerContext : DbContext
+    public class RealEstateCrawlerContext : DbContext
     {
         public virtual DbSet<Advertisement> AdvertisementSet { get; set; }
 
@@ -11,8 +10,7 @@ namespace Crawler.CrawlerConsoleApp
         {
             base.OnModelCreating(modelBuilder);
 
-            // Conventions
-            modelBuilder.Conventions.Remove<PluralizingTableNameConvention>();
+            modelBuilder.Entity<Advertisement>().ToTable($"{nameof(RealEstateCrawler)}_{nameof(Advertisement)}");
         }
     }
 }

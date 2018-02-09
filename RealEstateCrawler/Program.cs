@@ -8,25 +8,35 @@ using System.Threading;
 using System.Threading.Tasks;
 using HtmlAgilityPack;
 
-namespace Crawler.CrawlerConsoleApp
+namespace Crawlers.RealEstateCrawler
 {
     class Program
     {
+        private static string AdvertisementFolder = @".\Advertisements\";
+
         static void Main(string[] args)
         {
-            Trace.WriteLine($"Begin: {DateTime.Now}");
+            Trace.WriteLine($"Begin: {DateTime.UtcNow}");
             Trace.WriteLine("");
+
+            Init();
 
             Execute().GetAwaiter().GetResult();
 
             Trace.WriteLine("");
-            Trace.WriteLine($"End: {DateTime.Now}");
+            Trace.WriteLine($"End: {DateTime.UtcNow}");
             Trace.WriteLine("--------------------------------------------------");
+        }
+
+        static void Init()
+        {
+            if (!Directory.Exists(AdvertisementFolder))
+                Directory.CreateDirectory(AdvertisementFolder);
         }
 
         static async Task Execute()
         {
-            using (var dbContext = new CrawlerContext())
+            using (var dbContext = new RealEstateCrawlerContext())
             {
                 var list = Source.GetList();
                 var crawlFailedCount = 0;
@@ -71,7 +81,7 @@ namespace Crawler.CrawlerConsoleApp
         }
 
         /// <returns>Crawl failed?</returns>
-        static async Task<bool> ProcessAdvertisement(string advertisementUrl, CrawlerContext dbContext)
+        static async Task<bool> ProcessAdvertisement(string advertisementUrl, RealEstateCrawlerContext dbContext)
         {
             // Advertisement no
             var advertisementNoText = advertisementUrl.Substring(advertisementUrl.LastIndexOf("-", StringComparison.InvariantCulture) + 1,
@@ -111,7 +121,7 @@ namespace Crawler.CrawlerConsoleApp
             }
 
             // Previous crawl failed, but not old enough?
-            if (!newAdvertisement && DateTime.UtcNow.Subtract(advertisement.ModifiedOn).Days < 2)
+            if (false && !newAdvertisement && DateTime.UtcNow.Subtract(advertisement.ModifiedOn).Days < 2)
             {
                 Trace.WriteLine($"Not crawled, but not old enough: {advertisementNo}");
                 return false;
@@ -262,10 +272,10 @@ namespace Crawler.CrawlerConsoleApp
             // User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/62.0.3202.94 Safari/537.36
             request.Accept = "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8";
             request.Headers["Cache-Control"] = "no-cache";
-            request.Headers["Cookie"] = "vid=251; cdid=z3ms7al5YWZFH1xk5a12af49; MS1=https://www.google.nl/; __gfp_64b=ymQlACAE5aclwIuPnfNlCBhFmeqgsm82HOkUR7grwdT.f7; showPremiumBanner=false; __gads=ID=f79eadd924f8acef:T=1511173963:S=ALNI_Mb9yqYqoBUsP3rpm0f34PG4Fw0QIA; userLastSearchSplashClosed=true; wm-ueug=%22fdb1fbeb-586b-3f87-61be-5515c85e3251%22; wm-fgug=1; wm-ASRep-213909=1; emlakt=yeni; _sm_au_c=iDV0jQMKLFkFskf70f; xsrf-token=9a380393e210652f9b7d1cfd6fd20a8552211238; language=tr; gcd=20171129211839; MDR=20171129; lastVisit=20171129; userType=yeni_bireysel; shuid=cPX4A1VsoSIEky3xvEoM45A; dopingPurchase=false; getPurchase=false; st=a2c9cc949113d430a9e794c7e1aecd9db6bcc337f208f93a6f61947a90e24a0d889516fc0611039bac76f1ac446688f2ccdc2788166542f12; geoipCity=noord-holland; geoipIsp=tele2_nederland; bannerClosed=false; _dc_gtm_UA-235070-1=1; SPSI=9eb5643d884da35a0aa49e55f30404ce; sbtsck=jav; nwsh=std; spcsrf=7c8fa5dc89c3d5cffd5582e2d3fe09e9; dtLatC=5; PRLST=IX; UTGv2=h4a07ed5196caa15b65919ce1cfe8c0eaf38; segIds=; _ga=GA1.2.386445408.1511173963; _gid=GA1.2.1165316201.1512155230; dtPC=2$312693930_8h-vDRMGIELPTOKCOBBCIAFBCAFAJBFHFJIIMP; rxVisitor=15118947149954AKF11TH45A7T4R0SNN0FTM6UNHQ3DGA; rxvt=1512314499165|1512312693938; dtCookie=2$E4C5A9BE318043B3434969B7424CC9FA|RUM+Default+Application|1; dtSa=-";
+            request.Headers["Cookie"] = "MS1=https://www.sahibinden.com/satilik-daire/istanbul-beylikduzu-kavakli; st=a49a5ef3de75146728d2d9ac6cc71756cd73e81628d4fe4203e949aa46ec96e0059ae898956d3bd5063df02b6969ecab54bf7f327c8a080c6; vid=739; cdid=N4l4gyKIcB0aHz9E5a7dfff5; nwsh=std; showPremiumBanner=false; MS1=; MDR=20180105; segIds=; geoipCity=noord-holland; geoipIsp=tele2_nederland; __gfp_64b=zndhEw_KhYS5SCNDkodIFXZLCNnA150o_0Uvy22ak0L.T7; _ga=GA1.2.1423391260.1518206970; _gid=GA1.2.2088751936.1518206970; __gads=ID=154a63029aa1cb48:T=1518206968:S=ALNI_MaNd4IWxlJwcz-ezK27ccftffMucQ";
             request.Host = "www.sahibinden.com";
             request.Headers["Pragma"] = "no-cache";
-            request.UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/62.0.3202.94 Safari/537.36";
+            request.UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36";
 
             // Firefox
             // Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
@@ -323,7 +333,7 @@ namespace Crawler.CrawlerConsoleApp
 
         static string GetFilePath(int advertisementNo)
         {
-            return $@".\Advertisements\{advertisementNo}.html";
+            return $"{AdvertisementFolder}{advertisementNo}.html";
         }
 
         static string ReadHtmlFile(int advertisementNo)

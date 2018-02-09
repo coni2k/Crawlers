@@ -1,7 +1,7 @@
 ﻿using System;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace Crawler.CrawlerConsoleApp
+namespace Crawlers.RealEstateCrawler
 {
     public class Advertisement
     {
