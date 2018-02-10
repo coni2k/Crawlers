@@ -2,8 +2,10 @@
 using System.Runtime.InteropServices;
 
 [assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("Crawler")]
-[assembly: AssemblyCopyright("Copyright © 2017")]
+[assembly: AssemblyTitle("RealEstateCrawler")]
+[assembly: AssemblyDescription("")]
+[assembly: AssemblyProduct("RealEstateCrawler")]
+[assembly: AssemblyCopyright("Copyright © 2018")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 [assembly: AssemblyConfiguration("")]
@@ -14,4 +16,4 @@ using System.Runtime.InteropServices;
 [assembly: ComVisible(false)]
 
 // Aiming to stick to Semver versioning: http://semver.org/spec/v2.0.0.html
-[assembly: AssemblyInformationalVersion("0.3.0")]
+[assembly: AssemblyVersion("0.3.2")]

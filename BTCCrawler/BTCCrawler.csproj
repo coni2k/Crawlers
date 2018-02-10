@@ -60,7 +60,6 @@
     <Compile Include="BTCCrawlerContext.cs" />
     <Compile Include="BTCCrawlerLog.cs" />
     <Compile Include="BTCTurkTicker.cs" />
-    <Compile Include="FixerExchangeRate.cs" />
     <Compile Include="GDaxTicker.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

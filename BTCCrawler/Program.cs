@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Net.Mail;
 using System.Net.Mime;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -13,41 +14,48 @@ namespace Crawlers.BTCCrawler
     class Program
     {
         static HttpClient client = new HttpClient();
-        static string BTCTurkApiUrl = "https://www.btcturk.com/api/ticker";
-        static string FixerApiUrl = "https://api.fixer.io/latest?symbols=TRY";
-        static string GDaxApiUrl = "https://api.gdax.com/products/BTC-EUR/ticker";
-        static int cycle = 60 * 1000;
-        static int alertLimit = 250;
+        const string BTCTurkApiUrl = "https://www.btcturk.com/api/ticker";
+        const string GDaxApiUrl = "https://api.gdax.com/products/BTC-EUR/ticker";
 
         static void Main(string[] args)
         {
+            // Display appInfo
+            var appInfo = $"BTCCrawler - Version {Assembly.GetExecutingAssembly().GetName().Version}";
+
+            Trace.WriteLine("");
+            Trace.WriteLine(appInfo);
+            Trace.WriteLine("");
+            Trace.WriteLine(new string('-', appInfo.Length));
+            Trace.WriteLine("");
+
             // Init
             client.DefaultRequestHeaders.Add("User-Agent", "BTCCrawler");
 
+            // Run the cycle
             while (true)
             {
                 Crawl();
 
-                Thread.Sleep(cycle);
+                Thread.Sleep(AppSettings.CrawlCycle * 1000);
             }
         }
 
         static void Crawl()
         {
-            Trace.WriteLine($"Begin: {DateTime.UtcNow}");
-            Trace.WriteLine("");
+            // Get buy price, exchange rate, sell price and calculate the diff
+            var buyEURPrice = GetBuyEURPrice().GetAwaiter().GetResult();
+            var exchangeRate = AppSettings.ExchangeRate;
+            var sellTRYPrice = GetSellTRYPrice().GetAwaiter().GetResult();
+            var sellEURPrice = sellTRYPrice / exchangeRate;
+            var difference = sellEURPrice - buyEURPrice;
 
-            var buyPrice = GetBuyEURPrice().GetAwaiter().GetResult();
-            var exchangeRate = GetExchangeRate().GetAwaiter().GetResult();
-            var sellPrice = GetSellTRYPrice().GetAwaiter().GetResult();
-            var difference = (sellPrice / exchangeRate) - buyPrice;
+            var differenceText = $"{DateTime.UtcNow} | Buy: {buyEURPrice:0.0} | Rate: {exchangeRate:0.0} | Sell: {sellEURPrice:0.0} | Diff: { difference:+0.0;-0.0;0} EUR";
+            Trace.WriteLine(differenceText);
 
-            Trace.WriteLine($"{difference} EUR");
-
-            // Alert!
-            if (difference > alertLimit)
+            // Enough difference, send an alert email
+            if (AppSettings.AlertEmail_Enabled && difference > AppSettings.AlertEmail_DifferenceLimit)
             {
-                SendAlertEmail(difference);
+                SendAlertEmail(differenceText);
             }
 
             // Save to db log
@@ -55,9 +63,9 @@ namespace Crawlers.BTCCrawler
             {
                 var log = new CrawlerLog()
                 {
-                    BuyPrice = buyPrice,
+                    BuyPrice = buyEURPrice,
                     ExchangeRate = exchangeRate,
-                    SellPrice = sellPrice,
+                    SellPrice = sellEURPrice,
                     Difference = difference,
                     CreatedOn = DateTime.UtcNow
                 };
@@ -65,10 +73,6 @@ namespace Crawlers.BTCCrawler
                 dbContext.CrawlerLogSet.Add(log);
                 dbContext.SaveChanges();
             }
-
-            Trace.WriteLine("");
-            Trace.WriteLine($"End: {DateTime.UtcNow}");
-            Trace.WriteLine("--------------------------------------------------");
         }
 
         static async Task<float> GetBuyEURPrice()
@@ -79,18 +83,6 @@ namespace Crawlers.BTCCrawler
             {
                 var ticker = await response.Content.ReadAsAsync<GDaxTicker>();
                 return ticker.Price;
-            }
-
-            return 0;
-        }
-
-        static async Task<float> GetExchangeRate()
-        {
-            var response = await client.GetAsync(FixerApiUrl);
-            if (response.IsSuccessStatusCode)
-            {
-                var exchangeRate = await response.Content.ReadAsAsync<FixerExchangeRate>();
-                return exchangeRate.Rates.Try;
             }
 
             return 0;
@@ -109,17 +101,16 @@ namespace Crawlers.BTCCrawler
             return 0;
         }
 
-        static void SendAlertEmail(float difference)
+        static void SendAlertEmail(string text)
         {
             var mailMessage = new MailMessage
             {
-                From = new MailAddress(AppSettings.FromEmailAddress)
+                From = new MailAddress(AppSettings.AlertEmail_FromEmailAddress)
             };
 
-            mailMessage.To.Add(new MailAddress(AppSettings.ToEmailAddress));
+            mailMessage.To.Add(new MailAddress(AppSettings.AlertEmail_ToEmailAddress));
             mailMessage.Subject = "BTCCrawler - Price alert!";
 
-            var text = $"{difference} EUR";
             var html = text;
 
             mailMessage.AlternateViews.Add(AlternateView.CreateAlternateViewFromString(text, null, MediaTypeNames.Text.Plain));
