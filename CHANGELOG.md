@@ -1,5 +1,9 @@
 ### Changelog
 
+**0.3.3**
+
+* Minor
+
 **0.3.2**
 
 * Minor

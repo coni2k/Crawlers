@@ -49,7 +49,7 @@ namespace Crawlers.BTCCrawler
             var sellEURPrice = sellTRYPrice / exchangeRate;
             var difference = sellEURPrice - buyEURPrice;
 
-            var differenceText = $"{DateTime.UtcNow} | Buy: {buyEURPrice:0.0} | Rate: {exchangeRate:0.0} | Sell: {sellEURPrice:0.0} | Diff: { difference:+0.0;-0.0;0} EUR";
+            var differenceText = $"{DateTime.UtcNow} | Buy: {buyEURPrice:0.0} | Rate: {exchangeRate:0.000} | Sell: {sellEURPrice:0.0} | Diff: { difference:+0.0;-0.0;0} EUR";
             Trace.WriteLine(differenceText);
 
             // Enough difference, send an alert email
