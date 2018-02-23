@@ -43,17 +43,23 @@ namespace Crawlers.BTCCrawler
         static void Crawl()
         {
             // Get buy price, exchange rate, sell price and calculate the diff
-            var buyEURPrice = GetBuyEURPrice().GetAwaiter().GetResult();
             var exchangeRate = AppSettings.ExchangeRate;
+            var buyEURPrice = GetBuyEURPrice().GetAwaiter().GetResult();
+            var buyTRYPrice = buyEURPrice * exchangeRate;
             var sellTRYPrice = GetSellTRYPrice().GetAwaiter().GetResult();
             var sellEURPrice = sellTRYPrice / exchangeRate;
-            var difference = sellEURPrice - buyEURPrice;
+            var differenceEUR = sellEURPrice - buyEURPrice;
+            var differenceTRY = sellTRYPrice - buyTRYPrice;
 
-            var differenceText = $"{DateTime.UtcNow} | Buy: {buyEURPrice:0.0} | Rate: {exchangeRate:0.000} | Sell: {sellEURPrice:0.0} | Diff: { difference:+0.0;-0.0;0} EUR";
+            var differenceText = $"{DateTime.UtcNow}"
+                + $" | Rate: { exchangeRate: 0.000}"
+                + $" | EUR - Buy : {buyEURPrice:0.0} | Sell: {sellEURPrice:0.0} | Diff: { differenceEUR:+0.0;-0.0;0}"
+                + $" | TRY - Buy : {buyTRYPrice:0.0} | Sell: {sellTRYPrice:0.0} | Diff: { differenceTRY:+0.0;-0.0;0}";
+
             Trace.WriteLine(differenceText);
 
             // Enough difference, send an alert email
-            if (AppSettings.AlertEmail_Enabled && difference > AppSettings.AlertEmail_DifferenceLimit)
+            if (AppSettings.AlertEmail_Enabled && differenceEUR > AppSettings.AlertEmail_DifferenceLimit)
             {
                 SendAlertEmail(differenceText);
             }
@@ -66,7 +72,7 @@ namespace Crawlers.BTCCrawler
                     BuyPrice = buyEURPrice,
                     ExchangeRate = exchangeRate,
                     SellPrice = sellEURPrice,
-                    Difference = difference,
+                    Difference = differenceEUR,
                     CreatedOn = DateTime.UtcNow
                 };
 

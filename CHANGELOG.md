@@ -1,5 +1,9 @@
 ### Changelog
 
+**0.3.5**
+
+* Minor
+
 **0.3.4**
 
 * Icon
