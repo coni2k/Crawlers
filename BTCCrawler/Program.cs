@@ -101,7 +101,7 @@ namespace Crawlers.BTCCrawler
             if (response.IsSuccessStatusCode)
             {
                 var ticker = await response.Content.ReadAsAsync<IEnumerable<BTCTurkTicker>>();
-                return ticker.First().Last;
+                return ticker.Any() ? ticker.First().Last : 0;
             }
 
             return 0;
