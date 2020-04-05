@@ -1,5 +1,9 @@
 ### Changelog
 
+**0.4.0**
+
+* BTCCrawler - BTCTurk new API update
+
 **0.3.6**
 
 * Minor fix

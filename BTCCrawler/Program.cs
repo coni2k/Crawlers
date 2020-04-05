@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Net.Http;
@@ -14,7 +13,7 @@ namespace Crawlers.BTCCrawler
     class Program
     {
         static HttpClient client = new HttpClient();
-        const string BTCTurkApiUrl = "https://www.btcturk.com/api/ticker";
+        const string BTCTurkApiUrl = "https://api.btcturk.com/api/v2/ticker";
         const string GDaxApiUrl = "https://api.gdax.com/products/BTC-EUR/ticker";
 
         static void Main(string[] args)
@@ -100,8 +99,8 @@ namespace Crawlers.BTCCrawler
 
             if (response.IsSuccessStatusCode)
             {
-                var ticker = await response.Content.ReadAsAsync<IEnumerable<BTCTurkTicker>>();
-                return ticker.Any() ? ticker.First().Last : 0;
+                var ticker = await response.Content.ReadAsAsync<BTCTurkTicker>();
+                return ticker.data?.FirstOrDefault()?.last ?? 0;
             }
 
             return 0;
